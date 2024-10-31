@@ -16,9 +16,6 @@ using namespace std;
 
 struct Point {
     float coords[D];  // Συντεταγμένες στον 128-διάστατο χώρο
-    bool operator==(const Point& other) const {
-        return coords[0] == other.coords[0] && coords[1] == other.coords[1];
-    }
 };
 
 //Παίρνω σαν παράμετρο ένα candidate set V που είναι επιλεγμένο σύνολο k κοντινότερων γειτόνων απ' την greedy
