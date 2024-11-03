@@ -3,30 +3,23 @@
 
 #include "hpp/Point.hpp"
 #include "hpp/read_fvecs.hpp"
-#include "hpp/medoid.hpp"
-#include "hpp/graph.hpp"
-#include "hpp/random_permutation.hpp"
+#include "hpp/vamana_indexing.hpp"
 
 using namespace std;
 
 int main() {
-    // Step 1: Read points coordinates from fvecs file and store them in `points` object
+    // Read points coordinates from fvecs file and store them in `points` object
     const string FILENAME = "./input/siftsmall/siftsmall_base.fvecs";
-
     vector<Point> points = readFvecs(FILENAME);
 
-    // Step 2: Initialize a random R-regular directed graph
-    const int N = points.size();
-    const int R = 64;
+    // Run the Vamana indexing algorithm for the specified parameters
+    const int L = 100;
+    const int R = 20;
 
-    vector<vector<int>> graph = createGraph(N, R);
+    vector<Node> graph = vamana_indexing(points, L, R);
 
-    // Step 3: Find the medoid of dataset
-    int medoidIndex = findMedoidIndex(points);
-    Point medoidPoint = points[medoidIndex];
-
-    // Step 4: Randomly permute the numbers {0, 1, ..., N-1}
-    vector<int> randomPermuation = generateRandomPermutation(N);
-
+    // Run the greedy search algorithm for the query vectors
+    // greedySearch(graph, medoidId, queryPoint, k, L)
+    
     return 0;
 }
