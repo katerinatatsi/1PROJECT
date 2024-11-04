@@ -8,6 +8,8 @@
 using namespace std;
 
 void robustPrune(vector<Node> &graph, int currentNodeId, set<int> V, float alpha, int R) {
+    // cout << "Performing robust prune..." << endl;
+
     set<int> candidateSet(V.begin(), V.end());
 
     // Update candidateSet
@@ -15,10 +17,10 @@ void robustPrune(vector<Node> &graph, int currentNodeId, set<int> V, float alpha
         candidateSet.insert(neighborId);
     candidateSet.erase(currentNodeId);
 
-    // Clear 
+    // Clear the current neighbors list for new assignment
     graph[currentNodeId].neighbors.clear();
 
-    // απόσταση από το current node
+    // Lambda function to calculate distance from the current node
     auto query_distance = [&](int nodeId) {
         return graph[nodeId].point - graph[currentNodeId].point;
     };
@@ -37,13 +39,13 @@ void robustPrune(vector<Node> &graph, int currentNodeId, set<int> V, float alpha
         if (graph[currentNodeId].neighbors.size() == R)
             break;
         
-        // prune ανάλογα το  distance threshlod alpha 
+        // Prepare to prune nodes based on the distance threshold
         vector<int> nodesToRemove;
         for (int nodeId: candidateSet)
             if (alpha * (graph[bestNodeId].point - graph[nodeId].point) <= graph[currentNodeId].point - graph[nodeId].point)
                 nodesToRemove.push_back(nodeId);
         
-        // Remove από το candidateSet όσα "φάγανε" prune
+        // Remove pruned nodes from the candidate set
         for (int nodeId : nodesToRemove)
             candidateSet.erase(nodeId);
     }

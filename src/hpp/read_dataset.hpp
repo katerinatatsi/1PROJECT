@@ -1,5 +1,5 @@
-#ifndef READ_FVECS_HPP
-#define READ_FVECS_HPP
+#ifndef READ_DATASET_HPP
+#define READ_DATASET_HPP
 
 #include <vector>
 #include <string>
@@ -11,4 +11,7 @@ using namespace std;
 // Read points coordinates from fvecs file
 vector<Point> readFvecs(const string& filename);
 
-#endif // READ_FVECS_HPP
+// Read points coordinates from ivecs file
+vector<vector<int>> readIvecs(const string& filename);
+
+#endif // READ_DATASET_HPP

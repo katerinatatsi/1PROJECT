@@ -11,7 +11,7 @@ struct Point {
     vector<float> coords;  // Coordinates in a dynamically-sized space
 };
 
-// Overloaded - operator to calculate Euclidean distance between two Points
+// Overloaded - operator to calculate Euclidean distance between two points
 float operator-(const Point& a, const Point& b);
 
 #endif // POINT_HPP

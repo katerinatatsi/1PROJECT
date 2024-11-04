@@ -3,6 +3,7 @@ CXX = g++
 
 # Compiler flags
 CXXFLAGS = -Wall -Wextra -O2
+#LDFLAGS = -lstdc++
 
 # Target executable
 TARGET = main
@@ -12,7 +13,7 @@ SRC_DIR = src
 CPP_DIR = $(SRC_DIR)/cpp
 
 # Source files
-SRCS = $(SRC_DIR)/main.cpp $(CPP_DIR)/read_fvecs.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp
+SRCS = $(SRC_DIR)/main.cpp $(CPP_DIR)/read_dataset.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/greedy_search.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)

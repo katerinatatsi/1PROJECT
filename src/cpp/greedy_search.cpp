@@ -1,4 +1,5 @@
 #include <iostream>
+#include <utility>
 #include <vector>
 #include <set>
 #include <algorithm>
@@ -8,6 +9,8 @@
 using namespace std;
 
 pair<vector<int>, set<int>> greedySearch(const vector<Node>& graph, int startNodeId, const Point& queryPoint, int k, int L) {
+    // cout << "Performing greedy search..." << endl;
+    
     set<int> unexploredNodes = {startNodeId};
     set<int> visitedNodes;
 
@@ -62,16 +65,16 @@ pair<vector<int>, set<int>> greedySearch(const vector<Node>& graph, int startNod
     }
 
     // Sort the remaining unexploredNodes to get the k closest nodes
-    vector<int> unexploredNodesVector(unexploredNodes.begin(), unexploredNodes.end());
+    vector<int> kNearestNeighbors(unexploredNodes.begin(), unexploredNodes.end());
     sort(
-        unexploredNodesVector.begin(), 
-        unexploredNodesVector.end(), 
+        kNearestNeighbors.begin(), 
+        kNearestNeighbors.end(), 
         [&](int a, int b) { return query_distance(a) < query_distance(b); }
     );
 
     // Retain only the top k closest elements
-    if (unexploredNodesVector.size() > k)
-        unexploredNodesVector.resize(k);
+    if (kNearestNeighbors.size() > k)
+        kNearestNeighbors.resize(k);
 
-    return {unexploredNodesVector, visitedNodes};
+    return {kNearestNeighbors, visitedNodes};
 }
