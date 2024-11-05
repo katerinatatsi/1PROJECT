@@ -4,9 +4,9 @@
 #include <cstring> 
 #include <vector>
 #include <cmath> 
-#include "hpp/greedy_search.hpp"
-#include "hpp/Point.hpp"
-#include "hpp/Node.hpp"
+#include "../hpp/greedy_search.hpp"
+#include "../hpp/Point.hpp"
+#include "../hpp/Node.hpp"
 
 using namespace std;
 

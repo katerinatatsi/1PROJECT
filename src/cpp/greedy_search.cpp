@@ -3,7 +3,6 @@
 #include <vector>
 #include <set>
 #include <algorithm>
-
 #include "../hpp/greedy_search.hpp"
 
 using namespace std;
