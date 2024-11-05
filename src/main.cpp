@@ -25,20 +25,11 @@ int main() {
     vector<vector<int>> allGroundtruthNearestNeighbors = readIvecs(GROUNDTRUTH_FILENAME);
 
     // Run the Vamana indexing algorithm for the specified parameters
-    const int L = 100;
+    const int L = 200;
     const int R = 20;
 
-    // Keep only the first 100 points of the database (for testing purposes only)
+    // Keep only the first 1000 points of the database (for testing purposes only)
     // basePoints.resize(1000);
-
-    /* vector<Node> graph = initializeGraph(basePoints, 2);
-
-    for (size_t i = 0; i < graph.size(); i++) {
-        cout << "Node " << i << ": ";
-        for (int neighborId: graph[i].neighbors)
-            cout << neighborId << " ";
-        cout << "(dim = " << graph[i].point.coords.size() << ")" << endl;
-    } */
 
     vector<Node> graph = vamana_indexing(basePoints, L, R);
 
@@ -56,9 +47,9 @@ int main() {
     if (allGroundtruthNearestNeighbors.size() != allApproximateNearestNeighbors.size())
         throw invalid_argument("Vectors must have the same size (100)");
     
-    // Calculate recall@k
+    // Calculate k@recall
     vector<int> groundtruthNearestNeighbors, approximateNearestNeighbors, interesection;
-    int recall = 0;
+    float recall = 0;
     for (size_t i = 0; i < allGroundtruthNearestNeighbors.size(); i++) {
         groundtruthNearestNeighbors.assign(allGroundtruthNearestNeighbors[i].begin(), allGroundtruthNearestNeighbors[i].end());
         approximateNearestNeighbors.assign(allApproximateNearestNeighbors[i].begin(), allApproximateNearestNeighbors[i].end());
@@ -69,11 +60,11 @@ int main() {
         interesection.clear();
         set_intersection(groundtruthNearestNeighbors.begin(), groundtruthNearestNeighbors.end(), approximateNearestNeighbors.begin(), approximateNearestNeighbors.end(), back_inserter(interesection));
 
-        recall += interesection.size() / approximateNearestNeighbors.size();
+        recall += (float)interesection.size() / (float)approximateNearestNeighbors.size();
     }
 
     recall /= allGroundtruthNearestNeighbors.size();
-    cout << "k-recall: " << recall << endl;
+    cout << "k-recall = " << recall << " (R = " << R << ", L = " << L << ", k = " << k << ")" << endl;
 
     return 0;
 }
