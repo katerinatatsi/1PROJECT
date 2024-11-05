@@ -3,7 +3,6 @@
 #include <set>
 #include <utility>
 #include <algorithm>
-
 #include "hpp/Point.hpp"
 #include "hpp/read_dataset.hpp"
 #include "hpp/vamana_indexing.hpp"
