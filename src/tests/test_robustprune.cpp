@@ -2,8 +2,8 @@
 #include <vector>
 #include <set>
 #include <cassert>              // For using assert statements
-#include "../hpp/vamana_indexing.hpp"  // Header για τη συνάρτηση initializeGraph
-#include "../hpp/robust_prune.hpp"     // Header για τη συνάρτηση clrobustPrune
+#include "../hpp/vamana_indexing.hpp"  
+#include "../hpp/robust_prune.hpp"     
 #include "../hpp/Point.hpp"
 #include "../hpp/Node.hpp"
 
