@@ -1,85 +1,69 @@
-#include <iostream>
+#include "acutest.h"
+#include "medoid.h"
+#include <fstream>
 #include <vector>
-#include <cassert>               // For using assert statements
-#include "../hpp/vamana_indexing.hpp"
-#include "../hpp/Point.hpp"
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
 
-using namespace std;
+// Helper function to create a test dataset and write it to a binary file
+void create_test_dataset(const std::string& filename, const std::vector<std::pair<float, float>>& data) {
+    std::ofstream file(filename, std::ios::binary);
 
-// Test case to verify that the medoid is correctly calculated for a simple set of points
-void testMedoidCalculationSimple() {
-    vector<Point> points = {
-        Point({20.0f, 20.0f}),
-        Point({20.0f, 40.0f}),
-        Point({20.0f, 60.0f}),
-        Point({35.0f, 60.0f}),
-        Point({35.0f, 40.0f}),  // Expected medoid
-        Point({35.0f, 20.0f}),
-        Point({45.0f, 60.0f}),
-        Point({45.0f, 40.0f}),
-        Point({45.0f, 20.0f})
+    uint32_t num_vectors = data.size();
+    file.write(reinterpret_cast<const char*>(&num_vectors), sizeof(num_vectors));
+
+    struct Vector {
+        float C;
+        float T;
+        float values[100] = {0}; // Initialize the remaining dimensions to zero
     };
 
-    int medoidIndex = findMedoidId(points);
-    assert(medoidIndex == 4);  // Expected medoid is at index 4
-    cout << "Medoid Test 1 PASSED. Medoid found at index " << medoidIndex
-         << " with coordinates (" << points[medoidIndex].coords[0]
-         << ", " << points[medoidIndex].coords[1] << ")" << endl;
+    // Write each vector's data (C, T, and values) into the file
+    for (const auto& [C, T] : data) {
+        Vector vec = {C, T};
+        file.write(reinterpret_cast<const char*>(&vec.C), sizeof(vec.C));
+        file.write(reinterpret_cast<const char*>(&vec.T), sizeof(vec.T));
+        file.write(reinterpret_cast<const char*>(&vec.values), sizeof(vec.values));
+    }
+
+    file.close();
 }
 
-// Additional test case to check medoid calculation with a different set of points
-void testMedoidCalculationAdditional() {
-    vector<Point> points = {
-        Point({6.0f, 25.0f}),
-        Point({6.0f, 45.0f}),
-        Point({6.0f, 65.0f}),
-        Point({4.0f, 25.0f}),
-        Point({4.0f, 45.0f}),   // Expected medoid
-        Point({4.0f, 65.0f}),
-        Point({2.0f, 25.0f}),
-        Point({2.0f, 45.0f}),
-        Point({2.0f, 65.0f})
+// Test function for the FindMedoid function (basic functionality)
+void test_basic_functionality_ignore_τ() {
+    const std::string filename = "test_dataset.bin";
+
+    // Create the dataset with some test data
+    std::vector<std::pair<float, float>> data = {
+        {1.0f, 0.1f}, {1.0f, 0.2f}, {2.0f, 0.3f}, {2.0f, 0.4f}, {3.0f, 0.5f}
+    };
+    create_test_dataset(filename, data);
+
+    // Call the FindMedoid function
+    auto medoids = FindMedoid(filename, 100); // The value of τ doesn't matter here
+
+    // Check that the number of medoids is correct (there should be 3 filters: 1.0, 2.0, 3.0)
+    TEST_CHECK(medoids.size() == 3); // There are 3 filters (1.0, 2.0, 3.0)
+
+    // Expected medoids for each filter
+    std::unordered_map<int, std::vector<int>> expected_filters = {
+        {1, {1, 2}}, {2, {3, 4}}, {3, {5}}
     };
 
-    int medoidIndex = findMedoidId(points);
-    assert(medoidIndex == 4);  // Expected medoid is at index 4
-    cout << "Medoid Test 2 PASSED. Medoid found at index " << medoidIndex
-         << " with coordinates (" << points[medoidIndex].coords[0]
-         << ", " << points[medoidIndex].coords[1] << ")" << endl;
+    // Verify that the medoids correspond to one of the IDs for each filter
+    for (const auto& [filter, medoid_id] : medoids) {
+        TEST_CHECK(expected_filters.count(filter) == 1); // The filter exists
+        const auto& ids = expected_filters[filter];
+        TEST_CHECK(std::find(ids.begin(), ids.end(), medoid_id) != ids.end());
+    }
+
+    // Clean up the test file after the test
+    std::remove(filename.c_str());
 }
 
-// Third test case to ensure that medoid calculation works for another point set
-void testMedoidCalculationThird() {
-    vector<Point> points = {
-        Point({56.0f, 55.0f}),
-        Point({56.0f, 75.0f}),
-        Point({56.0f, 95.0f}),
-        Point({54.0f, 55.0f}),
-        Point({54.0f, 75.0f}),   // Expected medoid
-        Point({54.0f, 95.0f}),
-        Point({52.0f, 55.0f}),
-        Point({52.0f, 75.0f}),
-        Point({52.0f, 95.0f})
-    };
-
-    int medoidIndex = findMedoidId(points);
-    assert(medoidIndex == 4);  // Expected medoid is at index 4
-    cout << "Medoid Test 3 PASSED. Medoid found at index " << medoidIndex
-         << " with coordinates (" << points[medoidIndex].coords[0]
-         << ", " << points[medoidIndex].coords[1] << ")" << endl;
-}
-
-// Main function to run all test cases for medoid calculation
-int main() {
-    cout << "Starting Medoid Tests..." << endl;
-    cout << "-----------------------------" << endl;
-
-    testMedoidCalculationSimple();
-    testMedoidCalculationAdditional();
-    testMedoidCalculationThird();
-
-    cout << "-----------------------------" << endl;
-    cout << "All tests completed." << endl;
-
-    return 0;
-}
+// List of test cases
+TEST_LIST = {
+    {"test_basic_functionality_ignore_τ", test_basic_functionality_ignore_τ},
+    {NULL, NULL}
+};
