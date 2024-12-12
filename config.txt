@@ -1,0 +1,7 @@
+alpha 1.2
+L 80
+R 12
+k 100
+L_small 80
+R_small 12
+R_stitched 12
