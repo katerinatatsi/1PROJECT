@@ -1,0 +1,35 @@
+name: C++ Acutest CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Install dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y g++ make
+
+      # Step 3: Build the project
+      - name: Build
+        run: |
+          mkdir -p build
+          cd build
+          g++ -Wall -Wextra -O2 -o run_tests ../tests/test_medoid.cpp ../tests/test_greedy_search.cpp ../tests/test_robust_prune.cpp -I../src/hpp
+
+      # Step 4: Run tests
+      - name: Run tests
+        run: |
+          cd build
+          ./run_tests
