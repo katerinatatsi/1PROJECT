@@ -4,6 +4,8 @@
 #include <utility>
 #include <algorithm>
 #include <map>
+#include <fstream>
+#include <sstream>
 
 #include "hpp/Point.hpp"
 #include "hpp/medoid.hpp"
@@ -15,7 +17,6 @@ using namespace std;
 
 vector<int> calculateGroundTruthKnns(const vector<Point>& points, const Point& queryPoint, int k) {
     auto query_distance = [&](int pointId) {
-        // cout << nodeId << endl;
         return points[pointId] - queryPoint;
     };
 
@@ -34,15 +35,14 @@ vector<int> calculateGroundTruthKnns(const vector<Point>& points, const Point& q
 }
 
 float evaluate(
-    const vector<Node> graph, 
-    const vector<Point>& dataset, 
-    const vector<Point>& querySet, 
-    map<int, int> M, 
+    const vector<Node> graph,
+    const vector<Point>& dataset,
+    const vector<Point>& querySet,
+    map<int, int> M,
     set<int> filters,
     int k,
     int L
 ) {
-    // Run the greedy search algorithm to find the approximate nearest neighbors for the query vectors
     vector<int> intersection;
     float recall = 0;
     int numValidFilters = 0;
@@ -52,7 +52,6 @@ float evaluate(
 
         int filter = queryPoint.category;
 
-        // Make sure that filter is valid
         if (filters.find(filter) != filters.end()) {
             numValidFilters++;
 
@@ -77,10 +76,46 @@ float evaluate(
     return recall;
 }
 
+void readConfig(const string& filePath, float& alpha, int& L, int& R, int& k, int& L_small, int& R_small, int& R_stitched) {
+    ifstream configFile(filePath);
+    if (!configFile.is_open()) {
+        cerr << "Error: Unable to open configuration file: " << filePath << endl;
+        exit(1);
+    }
+
+    string line;
+    while (getline(configFile, line)) {
+        istringstream iss(line);
+        string key;
+        if (getline(iss, key, ' ')) {
+            string value;
+            if (getline(iss, value)) {
+                if (key == "alpha") alpha = stof(value);
+                else if (key == "L") L = stoi(value);
+                else if (key == "R") R = stoi(value);
+                else if (key == "k") k = stoi(value);
+                else if (key == "L_small") L_small = stoi(value);
+                else if (key == "R_small") R_small = stoi(value);
+                else if (key == "R_stitched") R_stitched = stoi(value);
+            }
+        }
+    }
+    configFile.close();
+}
+
 int main() {
+    const string CONFIG_FILE_PATH = "./config.txt";
     const string DATASET_FILE_PATH = "./input/dummy-data.bin";
     const string QUERY_FILE_PATH = "./input/dummy-queries.bin";
-    
+
+    float alpha = 1.2;
+    int L = 80, R = 12, k = 100;
+    int L_small = 80, R_small = 12, R_stitched = 12;
+
+
+    // Read parameters from configuration file
+    readConfig(CONFIG_FILE_PATH, alpha, L, R, k, L_small, R_small, R_stitched);
+
     // Read dataset
     vector<Point> datasetPoints = readDataset(DATASET_FILE_PATH);
 
@@ -88,8 +123,7 @@ int main() {
     vector<Point> queryPoints = readQuerySet(QUERY_FILE_PATH);
 
     set<int> allFilters;
-    for (const Point& p: datasetPoints) {
-        // Append all filters to their separate set
+    for (const Point& p : datasetPoints) {
         allFilters.insert(p.category);
     }
 
@@ -100,34 +134,19 @@ int main() {
     // Find medoid mapping
     map<int, int> M = findMedoid(datasetPoints, 1);
 
-    // Run the Vamana indexing algorithm for the specified parameters
-    const float alpha = 1.2;
-    const int L = 80;
-    const int R = 12;
-
-    const int L_small = 80;
-    const int R_small = 12;
-    const int R_stitched = 12;
-
-    // Keep only the first 1000 points of the dataset (for testing purposes only)
-    // datasetPoints.resize(10);
-
     vector<Node> filteredVamanaGraph = filteredVamanaIndexing(datasetPoints, alpha, L, R);
     vector<Node> stitchedVamanaGraph = stitchedVamanaIndexing(datasetPoints, allFilters, alpha, L_small, R_small, R_stitched);
-
-    // Run the greedy search algorithm to find the approximate nearest neighbors for the query vectors
-    const int k = 100;
 
     float filteredVamanaRecall = evaluate(filteredVamanaGraph, datasetPoints, queryPoints, M, allFilters, k, L);
     float stitchedVamanaRecall = evaluate(stitchedVamanaGraph, datasetPoints, queryPoints, M, allFilters, k, L);
 
     cout << "Filtered Vamana" << endl;
-    cout << "k-recall = " << filteredVamanaRecall << " (a = " << alpha << ", R = " << R << ", L = " << L << ", k = " << k << ")" << endl;
+    cout << "k-recall = " << filteredVamanaRecall << " (alpha = " << alpha << ", R = " << R << ", L = " << L << ", k = " << k << ")" << endl;
 
     cout << "-----------------------------------------------" << endl;
 
     cout << "Stitched Vamana" << endl;
-    cout << "k-recall = " << stitchedVamanaRecall << " (a = " << alpha << ", R_small = " << R_small << ", R_stitched =  " << R_stitched << ", L_small = " << L_small << ", k = " << k << ")" << endl;
-    
+    cout << "k-recall = " << stitchedVamanaRecall << " (alpha = " << alpha << ", R_small = " << R_small << ", R_stitched = " << R_stitched << ", L_small = " << L_small << ", k = " << k << ")" << endl;
+
     return 0;
 }
