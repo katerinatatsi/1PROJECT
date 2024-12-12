@@ -2,7 +2,10 @@
 
 using namespace std;
 
-Node::Node(Point p, vector<int> Neighbors) {
+// Constructor implementation
+Node::Node(Point p) : point(p), neighbors() {}
+
+/* Node::Node(Point p, vector<int> Neighbors) {
     point = p;
     neighbors = Neighbors;
-}
+} */

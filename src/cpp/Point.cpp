@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cmath>
 #include <stdexcept>
 
@@ -7,6 +8,9 @@ using namespace std;
 
 // Non-member overloaded - operator for Euclidean distance
 float operator-(const Point& a, const Point& b) {
+    // cout << a.coords.size() << endl;
+    // cout << b.coords.size() << endl;
+
     if (a.coords.size() != b.coords.size())
         throw invalid_argument("Points must have the same dimension for Euclidean distance calculation.");
 
