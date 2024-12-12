@@ -9,6 +9,8 @@
 
 using namespace std;
 
+void filteredRobustPrune(vector<Node> &graph, int currentNodeId, set<int> V, float alpha, int R);
+
 void robustPrune(vector<Node> &graph, int currentNodeId, set<int> V, float alpha, int R);
 
-#endif // ROBUST_PRUNE_HPP
+#endif  //ROBUST_PRUNE_HPP
