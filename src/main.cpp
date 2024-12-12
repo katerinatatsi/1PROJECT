@@ -3,67 +3,131 @@
 #include <set>
 #include <utility>
 #include <algorithm>
+#include <map>
+
 #include "hpp/Point.hpp"
-#include "hpp/read_dataset.hpp"
+#include "hpp/medoid.hpp"
+#include "hpp/io.hpp"
 #include "hpp/vamana_indexing.hpp"
 #include "hpp/greedy_search.hpp"
 
 using namespace std;
 
+vector<int> calculateGroundTruthKnns(const vector<Point>& points, const Point& queryPoint, int k) {
+    auto query_distance = [&](int pointId) {
+        // cout << nodeId << endl;
+        return points[pointId] - queryPoint;
+    };
+
+    vector<int> pointIdsToConsider;
+
+    for (int i = 0; i < (int)points.size(); i++)
+        if (queryPoint.category == -1 || (queryPoint.category >= 0 && points[i].category == queryPoint.category))
+            pointIdsToConsider.push_back(i);
+
+    sort(pointIdsToConsider.begin(), pointIdsToConsider.end(), [&](int a, int b) { return query_distance(a) < query_distance(b); });
+
+    if ((int)pointIdsToConsider.size() > k)
+        pointIdsToConsider.resize(k);
+
+    return pointIdsToConsider;
+}
+
+float evaluate(
+    const vector<Node> graph, 
+    const vector<Point>& dataset, 
+    const vector<Point>& querySet, 
+    map<int, int> M, 
+    set<int> filters,
+    int k,
+    int L
+) {
+    // Run the greedy search algorithm to find the approximate nearest neighbors for the query vectors
+    vector<int> intersection;
+    float recall = 0;
+    int numValidFilters = 0;
+
+    for (int i = 0; i < (int)querySet.size(); i++) {
+        Point queryPoint = querySet[i];
+
+        int filter = queryPoint.category;
+
+        // Make sure that filter is valid
+        if (filters.find(filter) != filters.end()) {
+            numValidFilters++;
+
+            pair<vector<int>, set<int>> res = filteredGreedySearch(graph, M, queryPoint, k, L);
+            vector<int> approximateNearestNeighbors = res.first;
+            vector<int> groundTruthNeighbors = calculateGroundTruthKnns(dataset, queryPoint, k);
+
+            sort(groundTruthNeighbors.begin(), groundTruthNeighbors.end());
+            sort(approximateNearestNeighbors.begin(), approximateNearestNeighbors.end());
+
+            intersection.clear();
+            set_intersection(groundTruthNeighbors.begin(), groundTruthNeighbors.end(), approximateNearestNeighbors.begin(), approximateNearestNeighbors.end(), back_inserter(intersection));
+
+            recall += (float)intersection.size() / (float)k;
+        }
+    }
+
+    cout << "# valid filters = " << numValidFilters << endl;
+
+    recall /= numValidFilters;
+
+    return recall;
+}
+
 int main() {
-    // Read base points coordinates from fvecs file
-    const string BASE_FILENAME = "./input/siftsmall/siftsmall_base.fvecs";
-    vector<Point> basePoints = readFvecs(BASE_FILENAME);
+    const string DATASET_FILE_PATH = "./input/dummy-data.bin";
+    const string QUERY_FILE_PATH = "./input/dummy-queries.bin";
+    
+    // Read dataset
+    vector<Point> datasetPoints = readDataset(DATASET_FILE_PATH);
 
-    // Read query points coordinates from fvecs file
-    const string QUERY_FILENAME = "./input/siftsmall/siftsmall_query.fvecs";
-    vector<Point> queryPoints = readFvecs(QUERY_FILENAME);
+    // Read query set
+    vector<Point> queryPoints = readQuerySet(QUERY_FILE_PATH);
 
-    // Read ground truth neighbor ids from ivecs file
-    const string GROUNDTRUTH_FILENAME = "./input/siftsmall/siftsmall_groundtruth.ivecs";
-    vector<vector<int>> allGroundtruthNearestNeighbors = readIvecs(GROUNDTRUTH_FILENAME);
+    set<int> allFilters;
+    for (const Point& p: datasetPoints) {
+        // Append all filters to their separate set
+        allFilters.insert(p.category);
+    }
+
+    cout << "# Dataset points: " << datasetPoints.size() << endl;
+    cout << "# Query points: " << queryPoints.size() << endl;
+    cout << "# Dataset filters: " << allFilters.size() << endl;
+
+    // Find medoid mapping
+    map<int, int> M = findMedoid(datasetPoints, 1);
 
     // Run the Vamana indexing algorithm for the specified parameters
-    const int L = 200;
-    const int R = 20;
+    const float alpha = 1.2;
+    const int L = 80;
+    const int R = 12;
 
-    // Keep only the first 1000 points of the database (for testing purposes only)
-    // basePoints.resize(1000);
+    const int L_small = 80;
+    const int R_small = 12;
+    const int R_stitched = 12;
 
-    vector<Node> graph = vamana_indexing(basePoints, L, R);
+    // Keep only the first 1000 points of the dataset (for testing purposes only)
+    // datasetPoints.resize(10);
+
+    vector<Node> filteredVamanaGraph = filteredVamanaIndexing(datasetPoints, alpha, L, R);
+    vector<Node> stitchedVamanaGraph = stitchedVamanaIndexing(datasetPoints, allFilters, alpha, L_small, R_small, R_stitched);
 
     // Run the greedy search algorithm to find the approximate nearest neighbors for the query vectors
-    int medoidId = findMedoidId(basePoints);
     const int k = 100;
 
-    vector<vector<int>> allApproximateNearestNeighbors;
+    float filteredVamanaRecall = evaluate(filteredVamanaGraph, datasetPoints, queryPoints, M, allFilters, k, L);
+    float stitchedVamanaRecall = evaluate(stitchedVamanaGraph, datasetPoints, queryPoints, M, allFilters, k, L);
 
-    for (Point queryPoint: queryPoints) {
-        pair<vector<int>, set<int>> res = greedySearch(graph, medoidId, queryPoint, k, L);
-        allApproximateNearestNeighbors.push_back(res.first);
-    }
+    cout << "Filtered Vamana" << endl;
+    cout << "k-recall = " << filteredVamanaRecall << " (a = " << alpha << ", R = " << R << ", L = " << L << ", k = " << k << ")" << endl;
 
-    if (allGroundtruthNearestNeighbors.size() != allApproximateNearestNeighbors.size())
-        throw invalid_argument("Vectors must have the same size (100)");
+    cout << "-----------------------------------------------" << endl;
+
+    cout << "Stitched Vamana" << endl;
+    cout << "k-recall = " << stitchedVamanaRecall << " (a = " << alpha << ", R_small = " << R_small << ", R_stitched =  " << R_stitched << ", L_small = " << L_small << ", k = " << k << ")" << endl;
     
-    // Calculate k@recall
-    vector<int> groundtruthNearestNeighbors, approximateNearestNeighbors, interesection;
-    float recall = 0;
-    for (size_t i = 0; i < allGroundtruthNearestNeighbors.size(); i++) {
-        groundtruthNearestNeighbors.assign(allGroundtruthNearestNeighbors[i].begin(), allGroundtruthNearestNeighbors[i].end());
-        approximateNearestNeighbors.assign(allApproximateNearestNeighbors[i].begin(), allApproximateNearestNeighbors[i].end());
-
-        sort(groundtruthNearestNeighbors.begin(), groundtruthNearestNeighbors.end());
-        sort(approximateNearestNeighbors.begin(), approximateNearestNeighbors.end());
-
-        interesection.clear();
-        set_intersection(groundtruthNearestNeighbors.begin(), groundtruthNearestNeighbors.end(), approximateNearestNeighbors.begin(), approximateNearestNeighbors.end(), back_inserter(interesection));
-
-        recall += (float)interesection.size() / (float)approximateNearestNeighbors.size();
-    }
-
-    recall /= allGroundtruthNearestNeighbors.size();
-    cout << "k-recall = " << recall << " (R = " << R << ", L = " << L << ", k = " << k << ")" << endl;
-
     return 0;
 }

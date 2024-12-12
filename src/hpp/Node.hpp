@@ -17,7 +17,7 @@ struct Node {
     // Constructor
     Node(Point p);
 
-    // Node(Point p, vector<int> Neighbors);
+    Node(Point p, vector<int> Neighbors);
 };
 
 #endif // NODE_HPP
