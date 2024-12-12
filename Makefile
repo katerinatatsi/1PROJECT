@@ -1,7 +1,7 @@
 # Compiler
 CXX = g++
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -O2
+CXXFLAGS = -Wall -Wextra -O2 -w
 # Target executable
 TARGET = main
 # Source and include directories
