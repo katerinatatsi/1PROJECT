@@ -1,66 +1,42 @@
 # Compiler
 CXX = g++
-
 # Compiler flags
-CXXFLAGS = -O2
-
-# Target executable for main
+CXXFLAGS = -Wall -Wextra -O2
+# Target executable
 TARGET = main
-
 # Source and include directories
 SRC_DIR = src
 CPP_DIR = $(SRC_DIR)/cpp
 TEST_DIR = $(SRC_DIR)/tests
-
-# Source files for main
-SRCS = $(SRC_DIR)/main.cpp $(CPP_DIR)/read_dataset.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/greedy_search.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp
-
-# Object files for main
+# Source files
+SRCS = $(SRC_DIR)/main.cpp $(CPP_DIR)/io.cpp $(CPP_DIR)/medoid.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/greedy_search.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp
+# Test files
+TEST_SRCS = $(TEST_DIR)/test_medoid.cpp $(TEST_DIR)/test_greedy_search.cpp $(TEST_DIR)/test_robust_prune.cpp
+# Test executables
+TEST_EXECUTABLES = $(TEST_DIR)/test_medoid $(TEST_DIR)/test_greedy_search $(TEST_DIR)/test_robust_prune
+# Object files
 OBJS = $(SRCS:.cpp=.o)
-
 # Default target
 all: $(TARGET)
-
-# Rule to build the main target executable
+# Rule to build the target executable
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
-
 # Rule to compile .cpp files in the src directory into object files
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# Target for the test_graph executable
-test_graph: $(TEST_DIR)/test_graph.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp
-	$(CXX) $(CXXFLAGS) $(TEST_DIR)/test_graph.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp -I. -o $(TEST_DIR)/test_graph
-
-# Target for the medoid executable
-test_medoid: $(TEST_DIR)/test_medoid.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp
-	$(CXX) $(CXXFLAGS) $(TEST_DIR)/test_medoid.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp -I. -o $(TEST_DIR)/test_medoid
-
-# Target for the robust prune executable
-test_robustprune: $(TEST_DIR)/test_robustprune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp
-	$(CXX) $(CXXFLAGS) $(TEST_DIR)/test_robustprune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/greedy_search.cpp -I. -o $(TEST_DIR)/test_robustprune
-
-# Target for the greedy_search executable
-test_greedy_search: $(TEST_DIR)/test_greedy_search.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/greedy_search.cpp
-	$(CXX) $(CXXFLAGS) $(TEST_DIR)/test_greedy_search.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp $(CPP_DIR)/greedy_search.cpp -I. -o $(TEST_DIR)/test_greedy_search
-
-# Target to run the test_graph executable
-run_test_graph: test_graph
-	./$(TEST_DIR)/test_graph
-
-# Target to run the test_medoid executable
-run_test_medoid: test_medoid
+# Rule to build each test executable
+$(TEST_DIR)/test_%: $(TEST_DIR)/test_%.cpp $(CPP_DIR)/io.cpp $(CPP_DIR)/medoid.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/greedy_search.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CPP_DIR)/io.cpp $(CPP_DIR)/medoid.cpp $(CPP_DIR)/vamana_indexing.cpp $(CPP_DIR)/greedy_search.cpp $(CPP_DIR)/robust_prune.cpp $(CPP_DIR)/Point.cpp $(CPP_DIR)/Node.cpp -I.
+# Target to build all tests
+tests: $(TEST_EXECUTABLES)
+# Target to run all tests
+run_tests: tests
+	@echo "Running test_medoid"
 	./$(TEST_DIR)/test_medoid
-
-# Target to run the test_robustprune executable
-run_test_robustprune: test_robustprune
-	./$(TEST_DIR)/test_robustprune
-
-# Target to run the test_greedy_search executable
-run_test_greedy_search: test_greedy_search
+	@echo "Running test_greedy_search"
 	./$(TEST_DIR)/test_greedy_search
-
+	@echo "Running test_robust_prune"
+	./$(TEST_DIR)/test_robust_prune
 # Clean up build files
 clean:
-	rm -f $(OBJS) $(TARGET) $(TEST_DIR)/test_graph $(TEST_DIR)/test_medoid $(TEST_DIR)/test_robustprune $(TEST_DIR)/test_greedy_search
+	rm -f $(OBJS) $(TARGET) $(TEST_EXECUTABLES)

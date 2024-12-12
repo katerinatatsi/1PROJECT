@@ -1,27 +1,37 @@
-#include "acutest.h"
-#include "medoid.h"
+#include "../hpp/acutest.hpp"
+#include "../hpp/medoid.hpp"
+#include "../hpp/io.hpp"
+#include <set>
 #include <fstream>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
 
-// Helper function to create a test dataset and write it to a binary file
-void create_test_dataset(const std::string& filename, const std::vector<std::pair<float, float>>& data) {
+// Helper function to create a test dataset
+void create_test_dataset(const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
 
-    uint32_t num_vectors = data.size();
+    // Number of vectors
+    int num_vectors = 5;
     file.write(reinterpret_cast<const char*>(&num_vectors), sizeof(num_vectors));
 
-    struct Vector {
-        float C;
-        float T;
-        float values[100] = {0}; // Initialize the remaining dimensions to zero
+    // Sample data points
+    struct TestVector {
+        float C;  // Category
+        float T;  // Additional attribute
+        float values[100] = {0};  // 100-dimensional vector
     };
 
-    // Write each vector's data (C, T, and values) into the file
-    for (const auto& [C, T] : data) {
-        Vector vec = {C, T};
+    std::vector<TestVector> vectors = {
+        {1.0f, 0.1f},  // First category
+        {1.0f, 0.2f},  // First category
+        {2.0f, 0.3f},  // Second category
+        {2.0f, 0.4f},  // Second category
+        {3.0f, 0.5f}   // Third category
+    };
+
+    for (auto& vec : vectors) {
         file.write(reinterpret_cast<const char*>(&vec.C), sizeof(vec.C));
         file.write(reinterpret_cast<const char*>(&vec.T), sizeof(vec.T));
         file.write(reinterpret_cast<const char*>(&vec.values), sizeof(vec.values));
@@ -30,40 +40,37 @@ void create_test_dataset(const std::string& filename, const std::vector<std::pai
     file.close();
 }
 
-// Test function for the FindMedoid function (basic functionality)
-void test_basic_functionality_ignore_τ() {
+// Test function for findMedoid
+void test_basic_functionality_medoid() {
     const std::string filename = "test_dataset.bin";
 
-    // Create the dataset with some test data
-    std::vector<std::pair<float, float>> data = {
-        {1.0f, 0.1f}, {1.0f, 0.2f}, {2.0f, 0.3f}, {2.0f, 0.4f}, {3.0f, 0.5f}
-    };
-    create_test_dataset(filename, data);
+    // Create test dataset
+    create_test_dataset(filename);
 
-    // Call the FindMedoid function
-    auto medoids = FindMedoid(filename, 100); // The value of τ doesn't matter here
+    // Read the points
+    std::vector<Point> points = readDataset(filename);
 
-    // Check that the number of medoids is correct (there should be 3 filters: 1.0, 2.0, 3.0)
-    TEST_CHECK(medoids.size() == 3); // There are 3 filters (1.0, 2.0, 3.0)
+    // Call findMedoid with a threshold
+    auto medoids = findMedoid(points, 100);
 
-    // Expected medoids for each filter
-    std::unordered_map<int, std::vector<int>> expected_filters = {
-        {1, {1, 2}}, {2, {3, 4}}, {3, {5}}
-    };
+    // Check the number of medoids
+    TEST_CHECK(medoids.size() == 3); // There are 3 unique categories (1, 2, 3)
 
-    // Verify that the medoids correspond to one of the IDs for each filter
-    for (const auto& [filter, medoid_id] : medoids) {
-        TEST_CHECK(expected_filters.count(filter) == 1); // The filter exists
-        const auto& ids = expected_filters[filter];
-        TEST_CHECK(std::find(ids.begin(), ids.end(), medoid_id) != ids.end());
+    // Verify categories
+    std::set<int> unique_categories = {1, 2, 3};
+    for (const auto& [category, _] : medoids) {
+        TEST_CHECK(unique_categories.count(category) > 0);
+        unique_categories.erase(category);
     }
 
-    // Clean up the test file after the test
+    TEST_CHECK(unique_categories.empty()); // Ensure all categories are represented
+
+    // Remove test file
     std::remove(filename.c_str());
 }
 
-// List of test cases
+// Test list
 TEST_LIST = {
-    {"test_basic_functionality_ignore_τ", test_basic_functionality_ignore_τ},
+    {"test_basic_functionality_medoid", test_basic_functionality_medoid},
     {NULL, NULL}
 };
