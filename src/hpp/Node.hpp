@@ -1,6 +1,7 @@
 #ifndef NODE_HPP
 #define NODE_HPP
 
+#include <iostream>
 #include <vector>
 #include <cmath>
 
@@ -13,7 +14,10 @@ struct Node {
     Point point;
     vector<int> neighbors;
 
-    Node(Point p, vector<int> Neighbors);
+    // Constructor
+    Node(Point p);
+
+    // Node(Point p, vector<int> Neighbors);
 };
 
 #endif // NODE_HPP
