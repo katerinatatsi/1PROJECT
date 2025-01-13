@@ -263,11 +263,24 @@ vector<Node> vamanaIndexing(const vector<Point>& points, float alpha, int L, int
 }
 
 void stitchGraphs(vector<Node>& G, const vector<Node>& Gf, map<int, int> M) {
-    for (int i = 0; i < (int)Gf.size(); i++) {
-        int global_i = M[i];
-        for (int neighbor: Gf[i].neighbors) {
-            int global_neighbor = M[neighbor];
-
+    for (size_t i = 0; i < Gf.size(); i++) {
+        auto it = M.find(i);
+        if (it == M.end()) {
+            continue;
+        }
+        int global_i = it->second;
+        if (global_i < 0 || global_i >= G.size()) {
+            continue;
+        }
+        for (int neighbor : Gf[i].neighbors) {
+            auto neighbor_it = M.find(neighbor);
+            if (neighbor_it == M.end()) {
+                continue;
+            }
+            int global_neighbor = neighbor_it->second;
+            if (global_neighbor < 0 || global_neighbor >= G.size()) {
+                continue;
+            }
             if (find(G[global_i].neighbors.begin(), G[global_i].neighbors.end(), global_neighbor) == G[global_i].neighbors.end()) {
                 G[global_i].neighbors.push_back(global_neighbor);
             }
@@ -282,72 +295,72 @@ void* stitchedVamanaWorker(void* arg) {
     }
 
     try {
-        vector<Point> Pf;
-        map<int, int> local_M;
-        
         for (int f : data->filter_values) {
-            // Clear and reserve space for efficiency
-            Pf.clear();
-            local_M.clear();
-            Pf.reserve(data->points->size());
+            // Create filtered dataset
+            vector<Point> Pf;
+            map<int, int> local_M;
             
-            // Build filtered dataset
+            // Filter points based on category
             for (size_t j = 0; j < data->points->size(); j++) {
                 if ((*data->points)[j].category == f) {
+                    local_M[Pf.size()] = j;
                     Pf.push_back((*data->points)[j]);
-                    local_M[Pf.size() - 1] = j;
                 }
             }
-            
+
             if (!Pf.empty()) {
-                // Process this filter
+                // Build local graph for this filter
                 vector<Node> Gf = vamanaIndexing(Pf, data->alpha, data->L, data->R);
                 
-                // Use RAII lock guard for exception safety
+                // Lock and stitch graphs
                 {
                     lock_guard<mutex> lock(*data->graph_mutex);
                     stitchGraphs(*data->main_graph, Gf, local_M);
                 }
             }
         }
-    } catch (const std::exception& e) {
-        cerr << "Error in stitched worker thread: " << e.what() << endl;
+    } catch (const exception& e) {
+        cerr << "Error in stitchedVamanaWorker: " << e.what() << endl;
     }
-    
+
     return nullptr;
 }
 
-vector<Node> stitchedVamanaIndexing(const vector<Point>& points, set<int> filters, 
-    float alpha, int L_small, int R_small, int R_stitched) {
-    
+vector<Node> stitchedVamanaIndexing(const vector<Point>& points, set<int> filters, float alpha, int L_small, int R_small, int R_stitched) {
     try {
-        // Initialize main graph
+        if (points.empty()) {
+            throw runtime_error("Empty points dataset");
+        }
+
+        // Validate point dimensions - should be 100 as per the data format
+        for (const auto& point : points) {
+            if (point.coords.size() != 100) {
+                throw runtime_error("Invalid point dimension: " + to_string(point.coords.size()));
+            }
+        }
+
         vector<Node> G = createEmptyGraph(points);
-        
-        // Use mutex instead of semaphore for better exception handling
         mutex graph_mutex;
-        
-        // Determine thread count - limit based on data size and available cores
+
         const int max_threads = thread::hardware_concurrency();
         const int num_threads = min(max_threads, static_cast<int>(filters.size()));
-        
+
         if (num_threads == 0) {
             return G;
         }
-        
-        // Convert filters to vector and distribute work
+
+        // Distribute filters among threads
         vector<int> filter_vec(filters.begin(), filters.end());
         vector<vector<int>> thread_filters(num_threads);
-        
-        // Distribute filters among threads
+
         for (size_t i = 0; i < filter_vec.size(); i++) {
             thread_filters[i % num_threads].push_back(filter_vec[i]);
         }
-        
-        // Create and initialize thread data
+
         vector<unique_ptr<StitchedThreadData>> thread_data;
         vector<pthread_t> threads(num_threads);
-        
+
+        // Create and launch threads
         for (int i = 0; i < num_threads; i++) {
             thread_data.push_back(make_unique<StitchedThreadData>(
                 StitchedThreadData{
@@ -360,28 +373,37 @@ vector<Node> stitchedVamanaIndexing(const vector<Point>& points, set<int> filter
                     &graph_mutex
                 }
             ));
-            
+
             int rc = pthread_create(&threads[i], nullptr, stitchedVamanaWorker, thread_data[i].get());
             if (rc != 0) {
-                throw runtime_error("Failed to create thread");
+                throw runtime_error("Failed to create thread " + to_string(i));
             }
         }
-        
-        // Wait for all threads
+
+        // Wait for threads to complete
         for (int i = 0; i < num_threads; i++) {
-            pthread_join(threads[i], nullptr);
+            void* status;
+            pthread_join(threads[i], &status);
+            if (status != nullptr) {
+                cerr << "Thread " << i << " failed" << endl;
+            }
         }
-        
-        // Final pruning step - single threaded for stability
+
+        // Final pruning step with proper error handling
         for (size_t i = 0; i < points.size(); i++) {
-            set<int> neighborsSet(G[i].neighbors.begin(), G[i].neighbors.end());
-            filteredRobustPrune(G, i, neighborsSet, alpha, R_stitched);
+            try {
+                set<int> neighborsSet(G[i].neighbors.begin(), G[i].neighbors.end());
+                filteredRobustPrune(G, i, neighborsSet, alpha, R_stitched);
+            } catch (const exception& e) {
+                cerr << "Error pruning node " << i << ": " << e.what() << endl;
+                continue;
+            }
         }
-        
+
         return G;
-        
-    } catch (const std::exception& e) {
-        cerr << "Error in stitched Vamana indexing: " << e.what() << endl;
-        return createEmptyGraph(points);  // Return empty graph on error
+
+    } catch (const exception& e) {
+        cerr << "Error in stitchedVamanaIndexing: " << e.what() << endl;
+        return createEmptyGraph(points);
     }
 }
