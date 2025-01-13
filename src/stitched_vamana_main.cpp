@@ -42,6 +42,22 @@ void readConfig(const string& filePath, float& alpha, int& L, int& R, int& k, in
     configFile.close();
 }
 
+void validateDataset(const vector<Point>& points, const string& dataset_name) {
+    if (points.empty()) {
+        throw runtime_error("Empty " + dataset_name);
+    }
+
+    size_t expected_dim = points[0].coords.size();
+    for (size_t i = 0; i < points.size(); i++) {
+        if (points[i].coords.size() != expected_dim) {
+            throw runtime_error(dataset_name + " dimension mismatch at point " + to_string(i) + 
+                              ": expected " + to_string(expected_dim) + " got " + 
+                              to_string(points[i].coords.size()));
+        }
+    }
+}
+
+
 int main() {
     // Attach to shared memory
     key_t key = ftok("/tmp", 'V');
@@ -53,8 +69,8 @@ int main() {
     VamanaSharedMemory* shm = attach_vamana_shared_memory(shmid);
 
     const string CONFIG_FILE_PATH = "./config.txt";
-    const string DATASET_FILE_PATH = "./input/dummy-data.bin";
-    const string QUERY_FILE_PATH = "./input/dummy-queries.bin";
+    const string DATASET_FILE_PATH = "./input/contest-data-release-1m.bin";
+    const string QUERY_FILE_PATH = "./input/contest-queries-release-1m.bin";
     
     // Read configuration parameters
     float alpha;
@@ -63,6 +79,17 @@ int main() {
     
     vector<Point> datasetPoints = readDataset(DATASET_FILE_PATH);
     vector<Point> queryPoints = readQuerySet(QUERY_FILE_PATH);
+
+    validateDataset(datasetPoints, "Dataset");
+    validateDataset(queryPoints, "Query set");
+        
+        // Verify that dataset and query points have same dimensions
+        if (!datasetPoints.empty() && !queryPoints.empty() && 
+            datasetPoints[0].coords.size() != queryPoints[0].coords.size()) {
+            throw runtime_error("Dataset and query points have different dimensions: " + 
+                              to_string(datasetPoints[0].coords.size()) + " vs " + 
+                              to_string(queryPoints[0].coords.size()));
+        }
 
     set<int> allFilters;
     for (const Point& p: datasetPoints) {
