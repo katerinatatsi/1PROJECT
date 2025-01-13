@@ -69,8 +69,8 @@ int main() {
     VamanaSharedMemory* shm = attach_vamana_shared_memory(shmid);
 
     const string CONFIG_FILE_PATH = "./config.txt";
-    const string DATASET_FILE_PATH = "./input/contest-data-release-1m.bin";
-    const string QUERY_FILE_PATH = "./input/contest-queries-release-1m.bin";
+    const string DATASET_FILE_PATH = "./input/dummy-data.bin";
+    const string QUERY_FILE_PATH = "./input/dummy-queries.bin";
     
     // Read configuration parameters
     float alpha;
